@@ -42,7 +42,7 @@ include_directories (${Boost_INCLUDE_DIRS})
 
 
 ###### TESTS  ############
-set (TESTS_PROJECT "${PROJECT}_ut")
+set (TESTS_PROJECT "${PROJECT}_ut.exe")
 enable_testing ()
 ###### /TESTS  ############
 
