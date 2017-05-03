@@ -1,5 +1,5 @@
 /*
- * RTLoop.h
+ * MTLoop.h
  */
 
 #ifndef MTLOOP_H
@@ -7,6 +7,7 @@
 
 #include <inttypes.h>
 #include <vector>
+#include <string>
 
 namespace MT {
 
@@ -21,11 +22,11 @@ namespace MT {
         TStat() {}
 
         void Start() {
-            startTime = micros();
+            startTime = 0; //micros();
         }
 
         void Stop() {
-            stopTime = micros();
+            stopTime = 0; //micros();
             uint32_t d = GetDuration();
             if (d > maxDuration)
                 maxDuration = d;

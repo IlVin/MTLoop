@@ -1,10 +1,9 @@
 
-/* RTLoop.cpp
- * RTLoop library 
+/* MTLoop.cpp
+ * MTLoop library
  */
 
-#include <Arduino.h>
-#include <RTLoop.h>
+#include <MTLoop.h>
 
 namespace {
 }
