@@ -1,0 +1,17 @@
+#######################################
+# Syntax Coloring Map For RTLoop
+#######################################
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+MTLoop		KEYWORD2
+MTStatistics	KEYWORD2
+MTCallback	KEYWORD2
+MTTask		KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
