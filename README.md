@@ -19,10 +19,13 @@
 * В планировщике предусмотрены элементарные средства отладки: TStat – сбор статистических данных и TLog – подсистема логирования
 
 ##UML диаграмма класссов
+
 [В виде файла Umbrello](doc/uml.xmi)
+
 ![В виде PNG](UML.png)
 
 ##Clone & run tests
+
     mkdir ~/MTLoop
     git clone https://github.com/IlVin/MTLoop.git ~/MTLoop
     cd ~/MTLoop/bin
