@@ -14,18 +14,32 @@
 
 namespace MT {
 
+#ifdef MTLOOP_MOCK_TIMER
     class TTimer {
-
-        private:
-            uint32_t curTime = 0;
-
         public:
-            virtual uint32_t GetTime() {
-                return ++curTime;
+            static uint32_t time;
+            static uint32_t increment;
+
+            static inline uint32_t GetTime() {
+                uint32_t t = time;
+                time += increment;
+                return t;
             }
     };
 
-    TTimer* defaultTimer = new TTimer();
+    uint32_t TTimer::time;
+    uint32_t TTimer::increment;
+
+#elif MTLOOP_DUMMY_TIMER
+#else
+    class TTimer {
+    private:
+    public:
+        static inline uint32_t GetTime() {
+            return 0;
+        }
+    };
+#endif
 
     class TLog {
 
@@ -46,12 +60,12 @@ namespace MT {
             uint32_t stopTime = 0;
 
         public:
-            inline void Start(TTimer& timer) {
-                startTime = timer.GetTime();
+            inline void Start() {
+                startTime = TTimer::GetTime();
             }
 
-            inline void Stop(TTimer& timer) {
-                stopTime = timer.GetTime();
+            inline void Stop() {
+                stopTime = TTimer::GetTime();
             }
 
             inline uint32_t GetDuration() {
@@ -97,30 +111,50 @@ namespace MT {
             , duration(duration) {}
 
         ~TTimeSlot() {
-//            delete task;
         }
 
         inline void SetStartTime(uint32_t time) {
             startTime = time;
         }
 
-        void Tick(TTimer& timer, TLog& log) {
+        inline bool Tick(TLog& log) {
+            uint32_t currTime = TTimer::GetTime();
+#ifdef DEBUG
             std::cout
-                << "TIME=" << timer.GetTime()
-                << "; startTime=" << startTime
+                << "TTimeSlot.Tick(): TTimeSlot=[" << GetLTime()
+                << ", " << GetRTime()
+                << "]; startTime=" << startTime
                 << "; duration=" << duration
                 << std::endl;
-            if (timer.GetTime() <= startTime + duration) { // Мы находимся в слоте
             std::cout
-                << "taskStartTime=" << taskStat.GetStartTime()
-                << "; startTime=" << startTime
+                << "                  currTime=" << currTime
+                << "; taskStat.GetStartTime=" << taskStat.GetStartTime()
+                << "; taskStat.GetStopTime=" << taskStat.GetStopTime()
                 << std::endl;
-                if (taskStat.GetStartTime() < startTime) { // Задача еще не была запущена в этом слоте
-                    taskStat.Start(timer);
-                    task->Run(log);
-                    taskStat.Stop(timer);
-                }
+#endif
+
+            if (currTime < GetLTime() || currTime > GetRTime())
+                return false;
+
+            if (!IsTaskStarted()) {
+                taskStat.Start();
+                task->Run(log);
+                taskStat.Stop();
             }
+            return true;
+        }
+
+        inline uint32_t GetLTime() {
+            return startTime;
+        }
+
+        inline uint32_t GetRTime() {
+            return startTime + duration - 1;
+        }
+
+        inline bool IsTaskStarted() {
+            return (taskStat.GetStartTime() >= GetLTime())
+                && (taskStat.GetStartTime() <= GetRTime());
         }
     };
 
@@ -138,13 +172,11 @@ namespace MT {
 
     class TLoop {
         private:
-            TTimer* timer;
             TLog* log;
             std::vector<TTimeSlotChain> timeSlotChains;
         public:
-            TLoop(TTimer* timer = defaultTimer, TLog* log = defaultLog)
-                : timer(timer)
-                , log(log)
+            TLoop(TLog* log = defaultLog)
+                : log(log)
             {}
 
             void AddTaskChain(std::vector<TTimeSlot> timeSlots) {
