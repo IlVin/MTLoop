@@ -100,15 +100,17 @@ namespace MT {
         TStat taskStat;
 
     private:
-        std::shared_ptr<TTask> task;
+        TTask& task;
         uint32_t startTime;
-        uint32_t duration;
+        uint32_t minDuration;
+        uint32_t padding;
 
     public:
-        TTimeSlot(std::shared_ptr<TTask> task, uint32_t duration = 100)
+        TTimeSlot(TTask& task, uint32_t minDuration = 100, uint32_t padding = 0)
             : task(task)
             , startTime(1)
-            , duration(duration) {}
+            , minDuration(minDuration)
+            , padding(padding) {}
 
         ~TTimeSlot() {
         }
@@ -117,30 +119,41 @@ namespace MT {
             startTime = time;
         }
 
+        inline void SetMinDuration(uint32_t time) {
+            minDuration = time;
+        }
+
+        inline void SetPadding(uint32_t time) {
+            padding = time;
+        }
+
         inline bool Tick(TLog& log) {
-            uint32_t currTime = TTimer::GetTime();
+            uint32_t tm = TTimer::GetTime();
 #ifdef DEBUG
             std::cout
-                << "TTimeSlot.Tick(): TTimeSlot=[" << GetLTime()
+                << "TTimeSlot(" << task.GetName() << ").Tick(): TTimeSlot=[" << GetLTime()
                 << ", " << GetRTime()
                 << "]; startTime=" << startTime
-                << "; duration=" << duration
+                << "; minDuration=" << minDuration
+                << "; padding=" << padding
                 << std::endl;
             std::cout
-                << "                  currTime=" << currTime
+                << "                  tm=" << tm
                 << "; taskStat.GetStartTime=" << taskStat.GetStartTime()
                 << "; taskStat.GetStopTime=" << taskStat.GetStopTime()
                 << std::endl;
 #endif
 
-            if (currTime < GetLTime() || currTime > GetRTime())
+            if (tm < startTime)
                 return false;
 
-            if (!IsTaskStarted()) {
-                taskStat.Start();
-                task->Run(log);
-                taskStat.Stop();
-            }
+            if (taskStat.GetStartTime() >= startTime)
+                return true;
+
+            taskStat.Start();
+            task.Run(log);
+            taskStat.Stop();
+
             return true;
         }
 
@@ -149,13 +162,20 @@ namespace MT {
         }
 
         inline uint32_t GetRTime() {
-            return startTime + duration - 1;
+            uint32_t tm = TTimer::GetTime();
+            uint32_t rTime = startTime + minDuration - 1;
+
+            if (taskStat.GetStartTime() >= startTime) {
+                uint32_t taskStopTimeWithPadding = taskStat.GetStopTime() + padding;
+                if (rTime < taskStopTimeWithPadding)
+                    rTime = taskStopTimeWithPadding;
+            } else if (tm > rTime) {
+                    rTime = tm + padding;
+            }
+
+            return rTime;
         }
 
-        inline bool IsTaskStarted() {
-            return (taskStat.GetStartTime() >= GetLTime())
-                && (taskStat.GetStartTime() <= GetRTime());
-        }
     };
 
 

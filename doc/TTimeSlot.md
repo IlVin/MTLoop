@@ -5,39 +5,39 @@
         TStat taskStat;
 
     private:
-        std::shared_ptr<TTask> task;
+        TTask& task;
         uint32_t startTime;
-        uint32_t duration;
+        uint32_t minDuration;
+        uint32_t padding;
 
     public:
-        TTimeSlot(std::shared_ptr<TTask> task, uint32_t duration = 100);
+        TTimeSlot(TTask& task, uint32_t minDuration = 100, uint32_t padding = 0);
         inline void SetStartTime(uint32_t time);
+        inline void SetMinDuration(uint32_t);
+        inline void SetPadding(uint32_t);
         inline bool Tick(TLog& log);
         inline uint32_t GetLTime();
         inline uint32_t GetRTime();
-        inline bool IsTaskStarted();
     };
 
-Отслеживает временной интервал, задаваемый функцией **SetStartTime** и определяемый
-параметром **duration**
+**TTimeSlot** ответственен за запуск таска. Таск должен быть обязательно запущен, причем только один раз, на заданном
+временном интервале. Это требование вытекает из логики функционирования класса **TTimeSlotChain**, который собирает
+**TTimeSlot** в цепочки, обуславливающие поток/нить/цепочку команд.
+
+Начало временного интервала устанавливает функция **SetStartTime**. Начиная с этого момента таск обязан быть выполнен при
+первой же передаче кванта времени в функцию **Tick()**.
+
+Конец временного интервала плавающий, но такой, чтобы обеспечить минимальную продолжительность тайм-слота, обусловленную
+**minDuration**. Плавающая продолжительность временного интервала обусловлена логикой функционирования **TTimeSlotChaun**.
 
 ### Временной интервал:
-    [GetLTime, GetRTime]
-
-## void SetStartTime(unt32_t time)
-
-Переносит начало временного интервала в заданный момент времени.
+    [GetLTime(), GetRTime()]
 
 ## bool Tick(TTimer& timer, TLog& log)
 
-Метод, через который планировщик пытается передать управление таску, привязанному к
-**TTimeSlot**. Если время, выдаваемое **TTimer**, попадает в интервал **[GetLTime, GetRTime]**
-и **TTask** ранее не запускался в данном слоте, происходит запуск TTask.
+Метод, через который планировщик передает квант времени выполнения команд таску, привязанному к **TTimeSlot**.
 
 **Output:**
-  **true** - Время, считанное с таймера попадает в интервал [GetLTime, GetRTime]
-  **false** - Время, считанное с таймера **не** попадает в интервал [GetLTime, GetRTime]
+  **true**  - Таск выполнен на заданном функцией **SetStartTime** временном интервале
+  **false** - Таск не выполнен.
 
-## bool IsTaskStarted
-
-**True** - если task уже стартовал в текущем временном интервале
