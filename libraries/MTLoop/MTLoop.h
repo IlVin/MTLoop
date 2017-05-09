@@ -59,23 +59,18 @@ namespace MT {
 
         private:
             callbackPtr cb;
-            std::string name;
             uint32_t startTime = 0;
             uint32_t stopTime = 0;
 
         public:
-            TTask(callbackPtr cb, std::string name = "NoName callback"): cb(cb), name(name) {}
-            TTask(const TTask& task): cb(task.cb), name(task.name) {}
+            TTask(callbackPtr cb): cb(cb) {}
+            TTask(const TTask& task): cb(task.cb) {}
 
             inline void Run(TLog& log) {
                 startTime = TTimer::GetTime();
                 cb(log);
                 stopTime = TTimer::GetTime();
             };
-
-            inline const std::string& GetName() {
-                return name;
-            }
 
             inline uint32_t GetStartTime() {
                 return startTime;

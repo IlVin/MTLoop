@@ -26,9 +26,9 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
 
         TTimeSlotFixture() {
             log = std::shared_ptr<TLog>(new TLog);
-            myTask1 = new TTask([](TLog& log){}, "MyTask 1");
-            myTask2 = new TTask([](TLog& log){}, "MyTask 2");
-            myTask3 = new TTask([](TLog& log){}, "MyTask 3");
+            myTask1 = new TTask([](TLog& log){});
+            myTask2 = new TTask([](TLog& log){});
+            myTask3 = new TTask([](TLog& log){});
             slot1 = new TTimeSlot(*myTask1, 100, 10);
             slot2 = new TTimeSlot(*myTask2, 100, 10);
             slot3 = new TTimeSlot(*myTask3, 100, 10);
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
                     std::cout << "RUN!!!" << std::endl;
                 #endif
                 TTimer::time += 50;
-            }, "TestTask");
+            });
         }
        ~TTaskFixture() {
            delete myTask;
@@ -67,8 +67,6 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
         {
             TTimeSlot slot = { *myTask, 100, 0 };
             slot.SetStartTime(5);
-
-            BOOST_CHECK_EQUAL(myTask->GetName(), "TestTask");
 
             BOOST_CHECK_EQUAL(slot.GetLTime(), 5);
             BOOST_CHECK_EQUAL(slot.GetRTime(), 5 + 100 - 1);
