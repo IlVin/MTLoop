@@ -48,7 +48,8 @@ namespace MT {
 
         public:
             TLog() {}
-            void Log(std::string logLine = "") {
+            virtual ~TLog(){}
+            void virtual Log(char* logLine) {
             }
     };
 
@@ -147,12 +148,11 @@ namespace MT {
     };
 
     typedef TTimeSlot * TTimeSlotPtr;
-
     class TTimeSlotChain {
         private:
             TTimeSlotPtr* timeSlots;
             size_t size = 0;
-            size_t curSlot = 0;
+            size_t curTimeSlot = 0;
 
         public:
             TTimeSlotChain(std::initializer_list<TTimeSlot> ts) {
@@ -168,7 +168,15 @@ namespace MT {
                 delete[] timeSlots;
             }
 
-            bool Tick() { return true; }
+            bool Tick(TLog& log) {
+                TTimeSlot* ts = timeSlots[curTimeSlot];
+                if (ts->Tick(log)) {
+                     curTimeSlot = (curTimeSlot + 1) % size;
+                     timeSlots[curTimeSlot]->SetStartTime(ts->GetRTime() + 1);
+                     return true;
+                };
+                return false;
+            }
     };
 
 

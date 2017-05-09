@@ -7,15 +7,25 @@
 #include "MTLoop.h"
 #include <string>
 #include <memory>
+#include <vector>
 
 
 using namespace MT;
 
 BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
 
+    struct TMockLog: public TLog {
+        std::vector<std::string> logLines;
+
+        void Log (char* logLine) {
+            std::string strLogLine{logLine};
+            logLines.push_back(strLogLine);
+        }
+    };
+
     struct TTimeSlotFixture {
 
-        std::shared_ptr<TLog> log;
+        TMockLog log;
         TTask* myTask1;
         TTask* myTask2;
         TTask* myTask3;
@@ -25,10 +35,9 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
         TTimeSlot* slot3;
 
         TTimeSlotFixture() {
-            log = std::shared_ptr<TLog>(new TLog);
-            myTask1 = new TTask([](TLog& log){});
-            myTask2 = new TTask([](TLog& log){});
-            myTask3 = new TTask([](TLog& log){});
+            myTask1 = new TTask([](TLog& log){ log.Log((char*)"TASK1 IS RUN"); });
+            myTask2 = new TTask([](TLog& log){ log.Log((char*)"TASK2 IS RUN"); });
+            myTask3 = new TTask([](TLog& log){ log.Log((char*)"TASK3 IS RUN"); });
             slot1 = new TTimeSlot(*myTask1, 100, 10);
             slot2 = new TTimeSlot(*myTask2, 100, 10);
             slot3 = new TTimeSlot(*myTask3, 100, 10);
@@ -45,16 +54,16 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
 
     struct TTaskFixture {
 
-        std::shared_ptr<TLog> log;
+        TMockLog log;
         TTask* myTask;
 
         TTaskFixture() {
-            log = std::shared_ptr<TLog>(new TLog);
             myTask = new TTask([](TLog& log){
                 #ifdef DEBUG
                     std::cout << "RUN!!!" << std::endl;
                 #endif
                 TTimer::time += 50;
+                log.Log((char*)"TASK IS RUN");
             });
         }
        ~TTaskFixture() {
@@ -81,19 +90,25 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
             slot.SetStartTime(5);
 
             TTimer::time = 4;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), false);
+            BOOST_CHECK_EQUAL(slot.Tick(log), false);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 0);
 
             TTimer::time = 5;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), true);
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 1);
+            BOOST_CHECK_EQUAL(log.logLines[0], "TASK IS RUN");
 
             TTimer::time = 5;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), true);
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 1);
 
             TTimer::time = 104;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), true);
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 1);
 
             TTimer::time = 105;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), true);
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 1);
         }
     }
 
@@ -106,7 +121,7 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
             slot.SetStartTime(5);
 
             TTimer::time = 10;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), true);
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
 
             TTimer::time = 115;
             BOOST_CHECK_EQUAL(slot.GetRTime(), 104);
@@ -133,7 +148,7 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
             slot.SetStartTime(5);
 
             TTimer::time = 10;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), true);
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
 
             TTimer::time = 100;
             BOOST_CHECK_EQUAL(slot.GetRTime(), 104);
@@ -160,7 +175,7 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
             slot.SetStartTime(5);
 
             TTimer::time = 90;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), true);
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
 
             TTimer::time = 200;
             BOOST_CHECK_EQUAL(slot.GetRTime(), 140);
@@ -176,7 +191,7 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
             slot.SetStartTime(5);
 
             TTimer::time = 5;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), true);
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
 
             TTimer::time = 105;
             BOOST_CHECK_EQUAL(slot.GetRTime(), 65);
@@ -203,7 +218,7 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
             slot.SetStartTime(5);
 
             TTimer::time = 10;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), true);
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
 
             TTimer::time = 100;
             BOOST_CHECK_EQUAL(slot.GetRTime(), 104);
@@ -218,7 +233,7 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
             slot.SetStartTime(5);
 
             TTimer::time = 45;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), true);
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
 
             TTimer::time = 100;
             BOOST_CHECK_EQUAL(slot.GetRTime(), 115);
@@ -245,7 +260,7 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
             slot.SetStartTime(5);
 
             TTimer::time = 90;
-            BOOST_CHECK_EQUAL(slot.Tick(*log), true);
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
 
             TTimer::time = 200;
             BOOST_CHECK_EQUAL(slot.GetRTime(), 150);
@@ -261,7 +276,9 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
                 {*myTask3, 50, 10}
             };
             TTimer::time = 90;
-            BOOST_CHECK_EQUAL(tsChain.Tick(), true);
+            BOOST_CHECK_EQUAL(tsChain.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 1);
+            BOOST_CHECK_EQUAL(log.logLines[0], "TASK1 IS RUN");
 
         }
     }
@@ -270,12 +287,30 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
     BOOST_FIXTURE_TEST_CASE( testTTimeSlotChain02, TTimeSlotFixture ) {
         {
             TTimeSlotChain tsChain {
-                { { [](TLog& log){ log.Log("Cb 1"); } }, 100, 10 },
-                { { [](TLog& log){ log.Log("Cb 2"); } }, 100, 20 },
-                { { [](TLog& log){ log.Log("Cb 3"); } }, 50, 10  }
+                { { [](TLog& log){ log.Log((char*)"TASK1 IS RUN"); } }, 100, 10 },
+                { { [](TLog& log){ log.Log((char*)"TASK2 IS RUN"); } }, 100, 20 },
+                { { [](TLog& log){ log.Log((char*)"TASK3 IS RUN"); } }, 50, 10  }
             };
-            TTimer::time = 90;
-            BOOST_CHECK_EQUAL(tsChain.Tick(), true);
+
+            TTimer::time = 50;
+            BOOST_CHECK_EQUAL(tsChain.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 1);
+            BOOST_CHECK_EQUAL(log.logLines[0], "TASK1 IS RUN");
+
+            TTimer::time = 150;
+            BOOST_CHECK_EQUAL(tsChain.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 2);
+            BOOST_CHECK_EQUAL(log.logLines[1], "TASK2 IS RUN");
+
+            TTimer::time = 250;
+            BOOST_CHECK_EQUAL(tsChain.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 3);
+            BOOST_CHECK_EQUAL(log.logLines[2], "TASK3 IS RUN");
+
+            TTimer::time = 350;
+            BOOST_CHECK_EQUAL(tsChain.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 4);
+            BOOST_CHECK_EQUAL(log.logLines[3], "TASK1 IS RUN");
 
         }
     }
