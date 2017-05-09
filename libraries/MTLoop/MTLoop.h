@@ -5,12 +5,13 @@
 #ifndef MTLOOP_H
 #define MTLOOP_H
 
+#include <stddef.h>
 #include <inttypes.h>
+#include <initializer_list> // Custom initializer_list for AVR
+
 #include <memory>
 #include <vector>
 #include <string>
-
-#include <iostream>
 
 namespace MT {
 
@@ -53,23 +54,27 @@ namespace MT {
 
     TLog* defaultLog = new TLog();
 
-    class TStat {
+    typedef void(*callbackPtr)(TLog& log);
+    class TTask {
 
         private:
+            callbackPtr cb;
+            std::string name;
             uint32_t startTime = 0;
             uint32_t stopTime = 0;
 
         public:
-            inline void Start() {
+            TTask(callbackPtr cb, std::string name = "NoName callback"): cb(cb), name(name) {}
+            TTask(const TTask& task): cb(task.cb), name(task.name) {}
+
+            inline void Run(TLog& log) {
                 startTime = TTimer::GetTime();
-            }
-
-            inline void Stop() {
+                cb(log);
                 stopTime = TTimer::GetTime();
-            }
+            };
 
-            inline uint32_t GetDuration() {
-                return stopTime - startTime;
+            inline const std::string& GetName() {
+                return name;
             }
 
             inline uint32_t GetStartTime() {
@@ -79,41 +84,31 @@ namespace MT {
             inline uint32_t GetStopTime() {
                 return stopTime;
             }
-    };
 
-    class TTask {
-
-        private:
-            std::string name;
-
-        public:
-            TTask(std::string name): name(name) {}
-            virtual ~TTask() {}
-            inline const std::string& GetName() {
-                return name;
+            inline uint32_t GetDuration() {
+                return stopTime - startTime;
             }
-            virtual void Run(TLog& log) = 0;
     };
 
     class TTimeSlot {
-    public:
-        TStat taskStat;
-
     private:
-        TTask& task;
+        TTask task;
         uint32_t startTime;
         uint32_t minDuration;
         uint32_t padding;
 
     public:
-        TTimeSlot(TTask& task, uint32_t minDuration = 100, uint32_t padding = 0)
+        TTimeSlot(TTask task, uint32_t minDuration = 100, uint32_t padding = 0)
             : task(task)
             , startTime(1)
             , minDuration(minDuration)
             , padding(padding) {}
 
-        ~TTimeSlot() {
-        }
+        TTimeSlot(const TTimeSlot& ts)
+            : task(ts.task)
+            , startTime(ts.startTime)
+            , minDuration(ts.minDuration)
+            , padding(ts.padding) {}
 
         inline void SetStartTime(uint32_t time) {
             startTime = time;
@@ -129,31 +124,11 @@ namespace MT {
 
         inline bool Tick(TLog& log) {
             uint32_t tm = TTimer::GetTime();
-#ifdef DEBUG
-            std::cout
-                << "TTimeSlot(" << task.GetName() << ").Tick(): TTimeSlot=[" << GetLTime()
-                << ", " << GetRTime()
-                << "]; startTime=" << startTime
-                << "; minDuration=" << minDuration
-                << "; padding=" << padding
-                << std::endl;
-            std::cout
-                << "                  tm=" << tm
-                << "; taskStat.GetStartTime=" << taskStat.GetStartTime()
-                << "; taskStat.GetStopTime=" << taskStat.GetStopTime()
-                << std::endl;
-#endif
-
             if (tm < startTime)
                 return false;
-
-            if (taskStat.GetStartTime() >= startTime)
+            if (task.GetStartTime() >= startTime)
                 return true;
-
-            taskStat.Start();
             task.Run(log);
-            taskStat.Stop();
-
             return true;
         }
 
@@ -164,29 +139,41 @@ namespace MT {
         inline uint32_t GetRTime() {
             uint32_t tm = TTimer::GetTime();
             uint32_t rTime = startTime + minDuration - 1;
-
-            if (taskStat.GetStartTime() >= startTime) {
-                uint32_t taskStopTimeWithPadding = taskStat.GetStopTime() + padding;
+            if (task.GetStartTime() >= startTime) {
+                uint32_t taskStopTimeWithPadding = task.GetStopTime() + padding;
                 if (rTime < taskStopTimeWithPadding)
                     rTime = taskStopTimeWithPadding;
             } else if (tm > rTime) {
-                    rTime = tm + padding;
+                rTime = tm + padding;
             }
-
             return rTime;
         }
 
     };
 
+    typedef TTimeSlot * TTimeSlotPtr;
 
     class TTimeSlotChain {
         private:
-            std::vector<TTimeSlot> timeSlots;
-        public:
-            TTimeSlotChain(std::vector<TTimeSlot> timeSlots)
-            : timeSlots(timeSlots) { }
+            TTimeSlotPtr* timeSlots;
+            size_t size = 0;
+            size_t curSlot = 0;
 
-            bool Tick() { }
+        public:
+            TTimeSlotChain(std::initializer_list<TTimeSlot> ts) {
+                size = ts.size();
+                timeSlots = new TTimeSlotPtr[size];
+                size_t i = 0;
+                for (const auto& item : ts)
+                    timeSlots[i++] = new TTimeSlot(item);
+            }
+            ~TTimeSlotChain() {
+                for (size_t i = 0; i < size; ++i)
+                    delete timeSlots[i];
+                delete[] timeSlots;
+            }
+
+            bool Tick() { return true; }
     };
 
 
@@ -199,9 +186,9 @@ namespace MT {
                 : log(log)
             {}
 
-            void AddTaskChain(std::vector<TTimeSlot> timeSlots) {
-                timeSlotChains.push_back(TTimeSlotChain(timeSlots));
-            }
+//            void AddTaskChain(std::vector<TTimeSlot> timeSlots) {
+//                timeSlotChains.push_back(TTimeSlotChain(timeSlots));
+//            }
             void Tick() {
             }
     };
