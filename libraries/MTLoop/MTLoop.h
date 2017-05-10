@@ -55,22 +55,27 @@ namespace MT {
 
     TLog* defaultLog = new TLog();
 
-    typedef void(*callbackPtr)(TLog& log);
     class TTask {
 
         private:
-            callbackPtr cb;
             uint32_t startTime = 0;
             uint32_t stopTime = 0;
 
         public:
-            TTask(callbackPtr cb): cb(cb) {}
-            TTask(const TTask& task): cb(task.cb) {}
+            TTask() {}
+            TTask(const TTask& task)
+                : startTime(task.startTime)
+                , stopTime(task.stopTime) {}
+            virtual ~TTask() {};
 
-            inline void Run(TLog& log) {
+            inline void Tick(TLog& log) {
                 startTime = TTimer::GetTime();
-                cb(log);
+                Run(log);
                 stopTime = TTimer::GetTime();
+            }
+
+            inline virtual void Run(TLog& log) {
+                log.Log((char*)"TTask::Run(TLog& log) must be override");
             };
 
             inline uint32_t GetStartTime() {
@@ -86,15 +91,36 @@ namespace MT {
             }
     };
 
+    typedef void(*callbackPtr)(TLog& log);
+    class TCallback: public TTask {
+        private:
+            callbackPtr cb;
+
+        public:
+            TCallback(callbackPtr cb): TTask(), cb(cb) {}
+            TCallback(const TCallback& task): TTask(task), cb(task.cb) {}
+
+            inline virtual void Run(TLog& log) {
+                cb(log);
+            };
+    };
+
+
     class TTimeSlot {
     private:
-        TTask task;
+        TTask& task;
         uint32_t startTime;
         uint32_t minDuration;
         uint32_t padding;
 
     public:
-        TTimeSlot(TTask task, uint32_t minDuration = 100, uint32_t padding = 0)
+        TTimeSlot(TCallback task, uint32_t minDuration = 100, uint32_t padding = 0)
+            : task(task)
+            , startTime(1)
+            , minDuration(minDuration)
+            , padding(padding) {}
+
+        TTimeSlot(TTask& task, uint32_t minDuration = 100, uint32_t padding = 0)
             : task(task)
             , startTime(1)
             , minDuration(minDuration)
@@ -124,7 +150,7 @@ namespace MT {
                 return false;
             if (task.GetStartTime() >= startTime)
                 return true;
-            task.Run(log);
+            task.Tick(log);
             return true;
         }
 

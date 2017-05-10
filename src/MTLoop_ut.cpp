@@ -23,21 +23,27 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
         }
     };
 
+    struct TMyTask: public TTask {
+        virtual void Run(TLog& log) {
+            log.Log((char*)"TMyTask IS RUN");
+        }
+    } myTaskStruct;
+
     struct TTimeSlotFixture {
 
         TMockLog log;
-        TTask* myTask1;
-        TTask* myTask2;
-        TTask* myTask3;
+        TCallback* myTask1;
+        TCallback* myTask2;
+        TCallback* myTask3;
 
         TTimeSlot* slot1;
         TTimeSlot* slot2;
         TTimeSlot* slot3;
 
         TTimeSlotFixture() {
-            myTask1 = new TTask([](TLog& log){ log.Log((char*)"TASK1 IS RUN"); });
-            myTask2 = new TTask([](TLog& log){ log.Log((char*)"TASK2 IS RUN"); });
-            myTask3 = new TTask([](TLog& log){ log.Log((char*)"TASK3 IS RUN"); });
+            myTask1 = new TCallback([](TLog& log){ log.Log((char*)"TASK1 IS RUN"); });
+            myTask2 = new TCallback([](TLog& log){ log.Log((char*)"TASK2 IS RUN"); });
+            myTask3 = new TCallback([](TLog& log){ log.Log((char*)"TASK3 IS RUN"); });
             slot1 = new TTimeSlot(*myTask1, 100, 10);
             slot2 = new TTimeSlot(*myTask2, 100, 10);
             slot3 = new TTimeSlot(*myTask3, 100, 10);
@@ -55,10 +61,10 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
     struct TTaskFixture {
 
         TMockLog log;
-        TTask* myTask;
+        TCallback* myTask;
 
         TTaskFixture() {
-            myTask = new TTask([](TLog& log){
+            myTask = new TCallback([](TLog& log){
                 #ifdef DEBUG
                     std::cout << "RUN!!!" << std::endl;
                 #endif
@@ -72,13 +78,56 @@ BOOST_AUTO_TEST_SUITE(testSuiteMTLoop)
     };
 
 
-    BOOST_FIXTURE_TEST_CASE( testTTimeSlotInit, TTaskFixture ) {
+
+    // Инициализация TCallback
+    BOOST_FIXTURE_TEST_CASE( testTTimeSlotInit01, TTaskFixture ) {
         {
             TTimeSlot slot = { *myTask, 100, 0 };
             slot.SetStartTime(5);
 
             BOOST_CHECK_EQUAL(slot.GetLTime(), 5);
             BOOST_CHECK_EQUAL(slot.GetRTime(), 5 + 100 - 1);
+
+            TTimer::time = 5;
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 1);
+            BOOST_CHECK_EQUAL(log.logLines[0], "TASK IS RUN");
+        }
+    }
+
+
+
+    // Инициализация кастомным объектом
+    BOOST_FIXTURE_TEST_CASE( testTTimeSlotInit02, TTaskFixture ) {
+        {
+            TTimeSlot slot = { myTaskStruct, 100, 0 };
+            slot.SetStartTime(5);
+
+            BOOST_CHECK_EQUAL(slot.GetLTime(), 5);
+            BOOST_CHECK_EQUAL(slot.GetRTime(), 5 + 100 - 1);
+
+            TTimer::time = 5;
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 1);
+            BOOST_CHECK_EQUAL(log.logLines[0], "TMyTask IS RUN");
+        }
+    }
+
+
+
+    // Инициализация лямбдой
+    BOOST_FIXTURE_TEST_CASE( testTTimeSlotInit03, TTaskFixture ) {
+        {
+            TTimeSlot slot = { { [](TLog& log){ log.Log((char*)"Lambda IS RUN"); } }, 100, 0 };
+            slot.SetStartTime(5);
+
+            BOOST_CHECK_EQUAL(slot.GetLTime(), 5);
+            BOOST_CHECK_EQUAL(slot.GetRTime(), 5 + 100 - 1);
+
+            TTimer::time = 5;
+            BOOST_CHECK_EQUAL(slot.Tick(log), true);
+            BOOST_CHECK_EQUAL(log.logLines.size(), 1);
+            BOOST_CHECK_EQUAL(log.logLines[0], "Lambda IS RUN");
         }
     }
 
