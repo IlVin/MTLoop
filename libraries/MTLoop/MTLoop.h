@@ -148,7 +148,11 @@ namespace MT {
                 return false;
             if (task.GetStartTime() >= startTime)
                 return true;
-            task.Tick(log);
+            try {
+                task.Tick(log);
+            } catch (...) {
+                log.Log((char*)"Exception detect");
+            }
             return true;
         }
 
