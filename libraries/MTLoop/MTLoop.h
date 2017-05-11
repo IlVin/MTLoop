@@ -74,9 +74,7 @@ namespace MT {
                 stopTime = TTimer::GetTime();
             }
 
-            inline virtual void Run(TLog& log) {
-                log.Log((char*)"TTask::Run(TLog& log) must be override");
-            };
+            virtual void Run(TLog& log) = 0;
 
             inline uint32_t GetStartTime() {
                 return startTime;
