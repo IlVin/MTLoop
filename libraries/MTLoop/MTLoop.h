@@ -266,7 +266,7 @@ namespace MT {
 //          void AddTaskChain(std::vector<TTimeSlot> timeSlots);
             void Tick();
     };
-    inline TLoop::TLoop(TLog* log = defaultLog)
+    inline TLoop::TLoop(TLog* log)
         : log(log)
     {}
 
