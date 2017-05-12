@@ -15,28 +15,30 @@
 
 namespace MT {
 
+#define tick_t uint32_t
+
 #ifdef MTLOOP_MOCK_TIMER
     class TTimer {
         public:
-            static uint32_t time;
-            static uint32_t increment;
+            static tick_t time;
+            static tick_t increment;
 
-            static inline uint32_t GetTime() {
-                uint32_t t = time;
+            static inline tick_t GetTime() {
+                tick_t t = time;
                 time += increment;
                 return t;
             }
     };
 
-    uint32_t TTimer::time;
-    uint32_t TTimer::increment;
+    tick_t TTimer::time;
+    tick_t TTimer::increment;
 
 #elif MTLOOP_DUMMY_TIMER
 #else
     class TTimer {
     private:
     public:
-        static inline uint32_t GetTime() {
+        static inline tick_t GetTime() {
             return 0;
         }
     };
@@ -58,8 +60,8 @@ namespace MT {
     class TTask {
 
         private:
-            uint32_t startTime = 0;
-            uint32_t stopTime = 0;
+            tick_t startTime = 0;
+            tick_t stopTime = 0;
 
         public:
             TTask() {}
@@ -76,15 +78,15 @@ namespace MT {
 
             virtual void Run(TLog& log) = 0;
 
-            inline uint32_t GetStartTime() {
+            inline tick_t GetStartTime() {
                 return startTime;
             }
 
-            inline uint32_t GetStopTime() {
+            inline tick_t GetStopTime() {
                 return stopTime;
             }
 
-            inline uint32_t GetDuration() {
+            inline tick_t GetDuration() {
                 return stopTime - startTime;
             }
     };
@@ -107,18 +109,18 @@ namespace MT {
     class TTimeSlot {
     private:
         TTask& task;
-        uint32_t startTime;
-        uint32_t minDuration;
-        uint32_t padding;
+        tick_t startTime;
+        tick_t minDuration;
+        tick_t padding;
 
     public:
-        TTimeSlot(TCallback task, uint32_t minDuration = 100, uint32_t padding = 0)
+        TTimeSlot(TCallback task, tick_t minDuration = 100, tick_t padding = 0)
             : task(task)
             , startTime(1)
             , minDuration(minDuration)
             , padding(padding) {}
 
-        TTimeSlot(TTask& task, uint32_t minDuration = 100, uint32_t padding = 0)
+        TTimeSlot(TTask& task, tick_t minDuration = 100, tick_t padding = 0)
             : task(task)
             , startTime(1)
             , minDuration(minDuration)
@@ -130,20 +132,20 @@ namespace MT {
             , minDuration(ts.minDuration)
             , padding(ts.padding) {}
 
-        inline void SetStartTime(uint32_t time) {
+        inline void SetStartTime(tick_t time) {
             startTime = time;
         }
 
-        inline void SetMinDuration(uint32_t time) {
+        inline void SetMinDuration(tick_t time) {
             minDuration = time;
         }
 
-        inline void SetPadding(uint32_t time) {
+        inline void SetPadding(tick_t time) {
             padding = time;
         }
 
         inline bool Tick(TLog& log) {
-            uint32_t tm = TTimer::GetTime();
+            tick_t tm = TTimer::GetTime();
             if (tm < startTime)
                 return false;
             if (task.GetStartTime() >= startTime)
@@ -156,15 +158,15 @@ namespace MT {
             return true;
         }
 
-        inline uint32_t GetLTime() {
+        inline tick_t GetLTime() {
             return startTime;
         }
 
-        inline uint32_t GetRTime() {
-            uint32_t tm = TTimer::GetTime();
-            uint32_t rTime = startTime + minDuration - 1;
+        inline tick_t GetRTime() {
+            tick_t tm = TTimer::GetTime();
+            tick_t rTime = startTime + minDuration - 1;
             if (task.GetStartTime() >= startTime) {
-                uint32_t taskStopTimeWithPadding = task.GetStopTime() + padding;
+                tick_t taskStopTimeWithPadding = task.GetStopTime() + padding;
                 if (rTime < taskStopTimeWithPadding)
                     rTime = taskStopTimeWithPadding;
             } else if (tm > rTime) {
