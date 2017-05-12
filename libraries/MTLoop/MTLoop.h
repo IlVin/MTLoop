@@ -15,7 +15,7 @@
 
 namespace MT {
 
-#define tick_t uint32_t
+typedef uint32_t tick_t;
 
 
 // ///////////////////////// //
@@ -64,8 +64,6 @@ namespace MT {
     };
 
     inline void TLog::Log(char* logLine) { }
-
-    TLog* defaultLog = new TLog();
 
 
 // ///////////////////////// //
@@ -257,23 +255,47 @@ namespace MT {
 // ///////////////////////// //
 //          TLoop            //
 // ///////////////////////// //
+    typedef TTimeSlotChain * TTimeSlotChainPtr;
     class TLoop {
         private:
-            TLog* log;
-            std::vector<TTimeSlotChain> timeSlotChains;
+            static TLog defaultLog;
+            TLog& log;
+            TTimeSlotChainPtr* timeSlotChains;
+            size_t size = 0;
+            size_t curTimeSlotChain = 0;
+            void Init(const std::initializer_list<TTimeSlotChain>& tsc);
         public:
-            TLoop(TLog* log = defaultLog);
-//          void AddTaskChain(std::vector<TTimeSlot> timeSlots);
+            TLoop(std::initializer_list<TTimeSlotChain> tsc);
+            TLoop(TLog& log, std::initializer_list<TTimeSlotChain> tsc);
+            ~TLoop();
             void Tick();
     };
-    inline TLoop::TLoop(TLog* log)
-        : log(log)
-    {}
 
-//  inline  void TLoop::AddTaskChain(std::vector<TTimeSlot> timeSlots) {
-//        timeSlotChains.push_back(TTimeSlotChain(timeSlots));
-//    }
+    inline void TLoop::Init(const std::initializer_list<TTimeSlotChain>& tsc) {
+        size = tsc.size();
+        timeSlotChains = new TTimeSlotChainPtr[size];
+        size_t i = 0;
+        for (const auto& item : tsc)
+            timeSlotChains[i++] = new TTimeSlotChain(item);
+    }
+
+    inline TLoop::TLoop(std::initializer_list<TTimeSlotChain> tsc): log(defaultLog) {
+        Init(tsc);
+    }
+
+    inline TLoop::TLoop(TLog& log, std::initializer_list<TTimeSlotChain> tsc): log(log) {
+        Init(tsc);
+    }
+
+    inline TLoop::~TLoop() {
+        for (size_t i = 0; i < size; ++i)
+            delete timeSlotChains[i];
+        delete[] timeSlotChains;
+    }
+
     inline void TLoop::Tick() {
+        timeSlotChains[curTimeSlotChain]->Tick(log);
+        curTimeSlotChain = (curTimeSlotChain + 1) % size;
     }
 }
 
