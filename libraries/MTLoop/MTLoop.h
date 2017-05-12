@@ -9,10 +9,6 @@
 #include <inttypes.h>
 #include <initializer_list> // Custom initializer_list for AVR
 
-#include <memory>
-#include <vector>
-#include <string>
-
 namespace MT {
 
 typedef uint32_t tick_t;
@@ -187,11 +183,7 @@ typedef uint32_t tick_t;
             return false;
         if (task.GetStartTime() >= startTime)
             return true;
-        try {
-            task.Tick(log);
-        } catch (...) {
-            log.Log((char*)"Exception detect");
-        }
+        task.Tick(log);
         return true;
     }
 
@@ -256,9 +248,9 @@ typedef uint32_t tick_t;
 //          TLoop            //
 // ///////////////////////// //
     typedef TTimeSlotChain * TTimeSlotChainPtr;
+    static TLog defaultLog;
     class TLoop {
         private:
-            static TLog defaultLog;
             TLog& log;
             TTimeSlotChainPtr* timeSlotChains;
             size_t size = 0;
