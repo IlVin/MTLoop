@@ -39,4 +39,7 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 
-
+#PVS-Studio
+*.log
+*.tasks
+strace_out

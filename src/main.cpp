@@ -1,3 +1,6 @@
+// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
 #define BOOST_TEST_MODULE testMTLoop
 
 #define DEBUG
@@ -42,10 +45,9 @@ int main () {
         }
     );
 
-    std::cout << "L2 ====" << std::endl;
-    std::cout << "mtLoop=" << std::hex << &mtLoop << std::endl;
     TTimer::time = 50;
     mtLoop.Run();
+
 
     return 0;
 }
