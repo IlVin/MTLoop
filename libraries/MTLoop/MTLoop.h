@@ -13,7 +13,6 @@ namespace MT {
 
 typedef uint32_t tick_t;
 
-
 // ///////////////////////// //
 //         TTimer            //
 // ///////////////////////// //
@@ -56,117 +55,248 @@ typedef uint32_t tick_t;
         public:
             TLog() {}
             virtual ~TLog(){}
-            void virtual Log(char* logLine);
+            void virtual Log(const char* logLine);
     };
 
-    inline void TLog::Log(char* logLine) { }
+    inline void TLog::Log(const char* logLine) { }
 
 
 // ///////////////////////// //
-//         TTask             //
+//         IRunnable         //
 // ///////////////////////// //
-    class TTask {
-        private:
-            tick_t startTime = 0;
-            tick_t stopTime = 0;
+    class IRunnable {
         public:
-            TTask();
-            TTask(const TTask& task);
-            virtual ~TTask();
+            virtual bool Run(TLog& log) = 0;
+            virtual ~IRunnable() = default;
+    };
 
-            void Tick(TLog& log);
-            virtual void Run(TLog& log) = 0;
+
+// ///////////////////////// //
+//         TStat         //
+// ///////////////////////// //
+    class TStat {
+        private:
+            tick_t startTime;
+            tick_t stopTime;
+        public:
+            TStat();
+            TStat(const TStat& stat);
+            void SetStartTime(tick_t tm);
+            void SetStopTime(tick_t tm);
             tick_t GetStartTime();
             tick_t GetStopTime();
             tick_t GetDuration();
     };
+ 
+    inline TStat::TStat()
+            : startTime(0)
+            , stopTime(0) {}
+    inline TStat::TStat(const TStat& stat)
+            : startTime(stat.startTime)
+            , stopTime(stat.stopTime) {}
 
-    inline TTask::TTask() {}
-    inline TTask::TTask(const TTask& task)
-        : startTime(task.startTime)
-        , stopTime(task.stopTime) {}
-    inline TTask::~TTask() {};
-
-    inline void TTask::Tick(TLog& log) {
-        startTime = TTimer::GetTime();
-        Run(log);
-        stopTime = TTimer::GetTime();
+    inline void TStat::SetStartTime(tick_t tm) {
+        startTime = tm;
     }
 
-    inline tick_t TTask::GetStartTime() {
+    inline void TStat::SetStopTime(tick_t tm) {
+        stopTime = tm;
+    }
+
+    inline tick_t TStat::GetStartTime() {
         return startTime;
     }
 
-    inline tick_t TTask::GetStopTime() {
+    inline tick_t TStat::GetStopTime() {
         return stopTime;
     }
 
-    inline tick_t TTask::GetDuration() {
-        return stopTime - startTime;
+   inline tick_t TStat::GetDuration() {
+       return stopTime - startTime;
+   }
+
+
+// ///////////////////////// //
+//         IAdapter          //
+// ///////////////////////// //
+    class IAdapter: public TStat, public IRunnable {
+        public:
+            virtual IAdapter* Clone() const = 0;
+            virtual ~IAdapter() = default;
+            bool Execute(TLog& log);
+    };
+
+    inline bool IAdapter::Execute(TLog& log) {
+        tick_t tm = TTimer::GetTime();
+        if (Run(log)) {
+            SetStartTime(tm);
+            SetStopTime(TTimer::GetTime());
+            return true;
+        }
+        return false;
     }
 
 
 // ///////////////////////// //
-//         TCallback         //
+//         TCbAdapter        //
 // ///////////////////////// //
-    typedef void(*callbackPtr)(TLog& log);
-    class TCallback: public TTask {
+    typedef bool(*callbackPtr)(TLog& log);
+    class TCbAdapter: public IAdapter {
         private:
             callbackPtr cb;
         public:
-            TCallback(callbackPtr cb);
-            TCallback(const TCallback& task);
-            virtual void Run(TLog& log);
+            TCbAdapter(callbackPtr cb);
+            TCbAdapter(const TCbAdapter& ca);
+            virtual IAdapter* Clone() const;
+            virtual bool Run(TLog& log);
     };
 
-    inline TCallback::TCallback(callbackPtr cb): TTask(), cb(cb) {}
-    inline TCallback::TCallback(const TCallback& task): TTask(task), cb(task.cb) {}
-    inline void TCallback::Run(TLog& log) {
-        cb(log);
+    inline TCbAdapter::TCbAdapter(callbackPtr cb): IAdapter(), cb(cb) {}
+    inline TCbAdapter::TCbAdapter(const TCbAdapter& ca): IAdapter(ca), cb(ca.cb) { };
+    inline IAdapter* TCbAdapter::Clone() const {
+        return new TCbAdapter{*this};
     };
+    inline bool TCbAdapter::Run(TLog& log) {
+        return cb(log);
+    };
+
+
+// ///////////////////////// //
+//         TCbDummyAdapter        //
+// ///////////////////////// //
+    typedef void(*callbackDummyPtr)();
+    class TCbDummyAdapter: public IAdapter {
+        private:
+            callbackDummyPtr cbd;
+        public:
+            TCbDummyAdapter(callbackDummyPtr cbd);
+            TCbDummyAdapter(const TCbDummyAdapter& ca);
+            virtual IAdapter* Clone() const;
+            virtual bool Run(TLog& log);
+    };
+
+    inline TCbDummyAdapter::TCbDummyAdapter(callbackDummyPtr cbd): IAdapter(), cbd(cbd) {}
+    inline TCbDummyAdapter::TCbDummyAdapter(const TCbDummyAdapter& ca): IAdapter(ca), cbd(ca.cbd) { }
+    inline IAdapter* TCbDummyAdapter::Clone() const {
+        return new TCbDummyAdapter{*this};
+    }
+    inline bool TCbDummyAdapter::Run(TLog& log) {
+        cbd();
+        return true;
+    }
+
+
+// ///////////////////////// //
+//         TTskAdapter       //
+// ///////////////////////// //
+    class TTskAdapter: public IAdapter {
+        private:
+            IRunnable& task;
+        public:
+            TTskAdapter(IRunnable& task);
+            TTskAdapter(const TTskAdapter& ta);
+            virtual IAdapter* Clone() const;
+            virtual bool Run(TLog& log);
+    };
+
+    inline TTskAdapter::TTskAdapter(IRunnable& task): IAdapter(), task(task) { }
+    inline TTskAdapter::TTskAdapter(const TTskAdapter& ta): IAdapter(ta), task(ta.task) { }
+    inline IAdapter* TTskAdapter::Clone() const {
+        return new TTskAdapter{*this};
+    }
+    inline bool TTskAdapter::Run(TLog& log) {
+        return task.Run(log);
+    }
+
+
+// ///////////////////////// //
+//         TTskPtrAdapter       //
+// ///////////////////////// //
+    class TTskPtrAdapter: public IAdapter {
+        private:
+            IRunnable* task;
+        public:
+            TTskPtrAdapter(IRunnable* task);
+            TTskPtrAdapter(const TTskPtrAdapter& ta);
+            ~TTskPtrAdapter();
+            virtual IAdapter* Clone() const;
+            virtual bool Run(TLog& log);
+    };
+
+    inline TTskPtrAdapter::TTskPtrAdapter(IRunnable* task): IAdapter(), task(task) { }
+    inline TTskPtrAdapter::TTskPtrAdapter(const TTskPtrAdapter& ta): IAdapter(ta), task(ta.task) { }
+    inline TTskPtrAdapter::~TTskPtrAdapter() {
+        delete task;
+    }
+    inline IAdapter* TTskPtrAdapter::Clone() const {
+        return new TTskPtrAdapter{*this};
+    }
+    inline bool TTskPtrAdapter::Run(TLog& log) {
+        return task->Run(log);
+    }
 
 
 // ///////////////////////// //
 //         TTimeSlot         //
 // ///////////////////////// //
-    class TTimeSlot {
+    class TTimeSlot: public IRunnable {
     private:
-        TTask& task;
-        tick_t startTime;
+        IAdapter* task;
+        tick_t slotStartTime = 1;
         tick_t minDuration;
         tick_t padding;
     public:
-        TTimeSlot(TCallback task, tick_t minDuration = 100, tick_t padding = 0);
-        TTimeSlot(TTask& task, tick_t minDuration = 100, tick_t padding = 0);
+        TTimeSlot(TCbAdapter ca, tick_t minDuration = 100, tick_t padding = 0);
+        TTimeSlot(TCbDummyAdapter ca, tick_t minDuration = 100, tick_t padding = 0);
+        TTimeSlot(TTskAdapter ta, tick_t minDuration = 100, tick_t padding = 0);
+        TTimeSlot(TTskPtrAdapter ta, tick_t minDuration = 100, tick_t padding = 0);
         TTimeSlot(const TTimeSlot& ts);
+        virtual ~TTimeSlot();
+        TTimeSlot * Clone() const;
+        virtual bool Run(TLog& log);
         void SetStartTime(tick_t time);
         void SetMinDuration(tick_t time);
         void SetPadding(tick_t time);
-        bool Tick(TLog& log);
         tick_t GetLTime();
         tick_t GetRTime();
     };
 
-    inline TTimeSlot::TTimeSlot(TCallback task, tick_t minDuration, tick_t padding)
-        : task(task)
-        , startTime(1)
+    inline TTimeSlot::TTimeSlot(TCbAdapter ca, tick_t minDuration, tick_t padding)
+        : task(ca.Clone())
         , minDuration(minDuration)
-        , padding(padding) {};
+        , padding(padding) {}
 
-    inline TTimeSlot::TTimeSlot(TTask& task, tick_t minDuration, tick_t padding)
-        : task(task)
-        , startTime(1)
+    inline TTimeSlot::TTimeSlot(TCbDummyAdapter ca, tick_t minDuration, tick_t padding)
+        : task(ca.Clone())
         , minDuration(minDuration)
-        , padding(padding) {};
+        , padding(padding) {}
+
+    inline TTimeSlot::TTimeSlot(TTskAdapter ta, tick_t minDuration, tick_t padding)
+        : task(ta.Clone())
+        , minDuration(minDuration)
+        , padding(padding) {}
+
+    inline TTimeSlot::TTimeSlot(TTskPtrAdapter ta, tick_t minDuration, tick_t padding)
+        : task(ta.Clone())
+        , minDuration(minDuration)
+        , padding(padding) {}
 
     inline TTimeSlot::TTimeSlot(const TTimeSlot& ts)
-        : task(ts.task)
-        , startTime(ts.startTime)
+        : task(ts.task->Clone())
+        , slotStartTime(ts.slotStartTime)
         , minDuration(ts.minDuration)
         , padding(ts.padding) {}
 
+    inline TTimeSlot::~TTimeSlot() {
+        delete task;
+    }
+
+    inline TTimeSlot * TTimeSlot::Clone() const {
+        return new TTimeSlot(*this);
+    }
+
     inline void TTimeSlot::SetStartTime(tick_t time) {
-        startTime = time;
+        slotStartTime = time;
     }
 
     inline void TTimeSlot::SetMinDuration(tick_t time) {
@@ -177,25 +307,26 @@ typedef uint32_t tick_t;
         padding = time;
     }
 
-    inline bool TTimeSlot::Tick(TLog& log) {
+    inline bool TTimeSlot::Run(TLog& log) {
         tick_t tm = TTimer::GetTime();
-        if (tm < startTime)
+        if (tm < slotStartTime)
             return false;
-        if (task.GetStartTime() >= startTime)
+        if (task->GetStartTime() >= slotStartTime)
             return true;
-        task.Tick(log);
-        return true;
+        if (task->Execute(log))
+            return true;
+        return false;
     }
 
     inline tick_t TTimeSlot::GetLTime() {
-        return startTime;
+        return slotStartTime;
     }
 
     inline tick_t TTimeSlot::GetRTime() {
         tick_t tm = TTimer::GetTime();
-        tick_t rTime = startTime + minDuration - 1;
-        if (task.GetStartTime() >= startTime) {
-            tick_t taskStopTimeWithPadding = task.GetStopTime() + padding;
+        tick_t rTime = slotStartTime + minDuration - 1;
+        if (task->GetStartTime() >= slotStartTime) {
+            tick_t taskStopTimeWithPadding = task->GetStopTime() + padding;
             if (rTime < taskStopTimeWithPadding)
                 rTime = taskStopTimeWithPadding;
         } else if (tm > rTime) {
@@ -203,6 +334,7 @@ typedef uint32_t tick_t;
         }
         return rTime;
     }
+
 
 // ///////////////////////// //
 //      TTimeSlotChain       //
@@ -214,28 +346,30 @@ typedef uint32_t tick_t;
             size_t size = 0;
             size_t curTimeSlot = 0;
         public:
-            TTimeSlotChain(std::initializer_list<TTimeSlot> ts);
+            TTimeSlotChain(const std::initializer_list<TTimeSlot>& ts);
             ~TTimeSlotChain();
-            bool Tick(TLog& log);
+            bool Run(TLog& log);
     };
 
-    inline TTimeSlotChain::TTimeSlotChain(std::initializer_list<TTimeSlot> ts) {
+    inline TTimeSlotChain::TTimeSlotChain(const std::initializer_list<TTimeSlot>& ts) {
         size = ts.size();
         timeSlots = new TTimeSlotPtr[size];
         size_t i = 0;
-        for (const auto& item : ts)
-            timeSlots[i++] = new TTimeSlot(item);
+        for (const auto& item : ts) {
+            timeSlots[i++] = item.Clone();
+        }
     }
 
     inline TTimeSlotChain::~TTimeSlotChain() {
-        for (size_t i = 0; i < size; ++i)
+        for (size_t i = 0; i < size; ++i) {
             delete timeSlots[i];
+        }
         delete[] timeSlots;
     }
 
-    inline bool TTimeSlotChain::Tick(TLog& log) {
+    inline bool TTimeSlotChain::Run(TLog& log) {
         TTimeSlot* ts = timeSlots[curTimeSlot];
-        if (ts->Tick(log)) {
+        if (ts->Run(log)) {
              curTimeSlot = (curTimeSlot + 1) % size;
              timeSlots[curTimeSlot]->SetStartTime(ts->GetRTime() + 1);
              return true;
@@ -253,30 +387,22 @@ typedef uint32_t tick_t;
         private:
             TLog& log;
             TTimeSlotChainPtr* timeSlotChains;
-            size_t size = 0;
-            size_t curTimeSlotChain = 0;
-            void Init(const std::initializer_list<TTimeSlotChain>& tsc);
+            size_t count;
+            size_t size;
+            size_t curTimeSlotChain;
         public:
-            TLoop(std::initializer_list<TTimeSlotChain> tsc);
-            TLoop(TLog& log, std::initializer_list<TTimeSlotChain> tsc);
+            TLoop(size_t count = 10, TLog& log = defaultLog);
             ~TLoop();
-            void Tick();
+            bool Attach(const std::initializer_list<TTimeSlot>& ts);
+            bool Run();
     };
 
-    inline void TLoop::Init(const std::initializer_list<TTimeSlotChain>& tsc) {
-        size = tsc.size();
+    inline TLoop::TLoop(size_t count, TLog& log)
+        : log(log)
+        , count(count)
+        , size(0)
+        , curTimeSlotChain(0) {
         timeSlotChains = new TTimeSlotChainPtr[size];
-        size_t i = 0;
-        for (const auto& item : tsc)
-            timeSlotChains[i++] = new TTimeSlotChain(item);
-    }
-
-    inline TLoop::TLoop(std::initializer_list<TTimeSlotChain> tsc): log(defaultLog) {
-        Init(tsc);
-    }
-
-    inline TLoop::TLoop(TLog& log, std::initializer_list<TTimeSlotChain> tsc): log(log) {
-        Init(tsc);
     }
 
     inline TLoop::~TLoop() {
@@ -285,9 +411,17 @@ typedef uint32_t tick_t;
         delete[] timeSlotChains;
     }
 
-    inline void TLoop::Tick() {
-        timeSlotChains[curTimeSlotChain]->Tick(log);
+    inline bool TLoop::Attach(const std::initializer_list<TTimeSlot>& ts) {
+        if (size >= count)
+            return false;
+        timeSlotChains[size++] = new TTimeSlotChain(ts);
+        return true;
+    };
+
+    inline bool TLoop::Run() {
+        bool result = timeSlotChains[curTimeSlotChain]->Run(log);
         curTimeSlotChain = (curTimeSlotChain + 1) % size;
+        return result;
     }
 }
 

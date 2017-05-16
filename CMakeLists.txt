@@ -24,7 +24,7 @@ set (TST_DIR ${PROJECT_SOURCE_DIR}/test)
 
 ######  JValue  ############
 add_library (MTLoop_lib STATIC "${LIB_DIR}/MTLoop.cpp")
-set (LIBRARIES ${LIBRARIES} MTLoop_lib)
+set (TARGET_LIBRARIES ${TARGET_LIBRARIES} MTLoop_lib)
 include_directories (${INC_DIR})
 ###### /JValue  ############
 
@@ -35,29 +35,27 @@ set (Boost_USE_STATIC_LIBS ON)
 set (Boost_USE_MULTITHREADED ON)
 
 find_package (Boost COMPONENTS unit_test_framework REQUIRED)
-set (LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
 include_directories (${Boost_INCLUDE_DIRS})
 ###### /BOOST  ############
 
 
 
 ###### TESTS  ############
-set (TESTS_PROJECT "${PROJECT}_ut.exe")
 enable_testing ()
 ###### /TESTS  ############
 
 
 
 ######  EXECUTABLE  ############
-#add_executable (${PROJECT} "${PROJECT_SOURCE_DIR}/main.cpp")
-add_executable (${TESTS_PROJECT} "${SRC_DIR}/MTLoop_ut.cpp")
+add_executable ("${PROJECT}.exe" "${SRC_DIR}/main.cpp")
+add_executable ("${PROJECT}_ut.exe" "${SRC_DIR}/MTLoop_ut.cpp")
 ###### /EXECUTABLE  ############
 
 
 
 ######  LINKING LIBRARY  ############
-foreach (LIBRARY ${LIBRARIES})
-    target_link_libraries(${TESTS_PROJECT} ${LIBRARY})
+foreach (LIBRARY ${TARGET_LIBRARIES})
+    target_link_libraries(${LIBRARY})
     #    target_link_libraries(${PROJECT} ${LIBRARY})
 endforeach ()
 ###### /LINKING LIBRARY  ############
