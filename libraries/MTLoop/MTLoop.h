@@ -11,7 +11,7 @@
 
 namespace MT {
 
-typedef uint32_t tick_t;
+using tick_t = uint32_t;
 
 // ///////////////////////// //
 //         TTimer            //
@@ -37,9 +37,9 @@ typedef uint32_t tick_t;
 #elif MTLOOP_DUMMY_TIMER
 #else
     class TTimer {
-    public:
-        static tick_t GetTime();
-    private:
+        public:
+            static tick_t GetTime();
+        private:
     };
 
     inline tick_t TTimer::GetTime() {
@@ -53,8 +53,8 @@ typedef uint32_t tick_t;
 // ///////////////////////// //
     class TLog {
         public:
-            TLog() {}
-            virtual ~TLog(){}
+            TLog() = default;
+            virtual ~TLog() = default;
             void virtual Log(const char* logLine);
         private:
     };
@@ -147,20 +147,22 @@ typedef uint32_t tick_t;
 // ///////////////////////// //
 //         TCbAdapter        //
 // ///////////////////////// //
-    typedef bool(*callbackPtr)(TLog& log);
+    using callbackPtr = bool(*)(TLog& log);
     class TCbAdapter: public IAdapter {
         public:
             TCbAdapter(callbackPtr cb);
             TCbAdapter(const TCbAdapter& ca);
-            virtual IAdapter* Clone() const;
+            IAdapter* Clone() const override;
             TCbAdapter& operator=(const TCbAdapter& ts);
-            virtual bool Run(TLog& log);
+            bool Run(TLog& log) override;
         private:
             callbackPtr cb;
     };
 
-    inline TCbAdapter::TCbAdapter(callbackPtr cb): IAdapter(), cb(cb) {}
-    inline TCbAdapter::TCbAdapter(const TCbAdapter& ca): IAdapter(ca), cb(ca.cb) { };
+    inline TCbAdapter::TCbAdapter(callbackPtr cb): IAdapter(), cb(cb) {
+    }
+    inline TCbAdapter::TCbAdapter(const TCbAdapter& ca): IAdapter(ca), cb(ca.cb) {
+    }
     inline IAdapter* TCbAdapter::Clone() const {
         return new TCbAdapter{*this};
     }
@@ -179,20 +181,22 @@ typedef uint32_t tick_t;
 // ///////////////////////// //
 //         TCbDummyAdapter        //
 // ///////////////////////// //
-    typedef void(*callbackDummyPtr)();
+    using callbackDummyPtr = void(*)();
     class TCbDummyAdapter: public IAdapter {
         public:
             TCbDummyAdapter(callbackDummyPtr cbd);
             TCbDummyAdapter(const TCbDummyAdapter& ca);
-            virtual IAdapter* Clone() const;
+            IAdapter* Clone() const override;
             TCbDummyAdapter& operator=(const TCbDummyAdapter& ts);
-            virtual bool Run(TLog& log);
+            bool Run(TLog& log) override;
         private:
             callbackDummyPtr cbd;
     };
 
-    inline TCbDummyAdapter::TCbDummyAdapter(callbackDummyPtr cbd): IAdapter(), cbd(cbd) {}
-    inline TCbDummyAdapter::TCbDummyAdapter(const TCbDummyAdapter& ca): IAdapter(ca), cbd(ca.cbd) { }
+    inline TCbDummyAdapter::TCbDummyAdapter(callbackDummyPtr cbd): IAdapter(), cbd(cbd) {
+    }
+    inline TCbDummyAdapter::TCbDummyAdapter(const TCbDummyAdapter& ca): IAdapter(ca), cbd(ca.cbd) {
+    }
     inline IAdapter* TCbDummyAdapter::Clone() const {
         return new TCbDummyAdapter{*this};
     }
@@ -216,15 +220,17 @@ typedef uint32_t tick_t;
         public:
             TTskAdapter(IRunnable& task);
             TTskAdapter(const TTskAdapter& ta);
-            virtual IAdapter* Clone() const;
+            IAdapter* Clone() const override;
             TTskAdapter& operator=(const TTskAdapter& ts);
-            virtual bool Run(TLog& log);
+            bool Run(TLog& log) override;
         private:
             IRunnable& task;
     };
 
-    inline TTskAdapter::TTskAdapter(IRunnable& task): IAdapter(), task(task) { }
-    inline TTskAdapter::TTskAdapter(const TTskAdapter& ta): IAdapter(ta), task(ta.task) { }
+    inline TTskAdapter::TTskAdapter(IRunnable& task): IAdapter(), task(task) {
+    }
+    inline TTskAdapter::TTskAdapter(const TTskAdapter& ta): IAdapter(ta), task(ta.task) {
+    }
     inline IAdapter* TTskAdapter::Clone() const {
         return new TTskAdapter{*this};
     }
@@ -248,9 +254,9 @@ typedef uint32_t tick_t;
             TTskPtrAdapter(IRunnable* task);
             TTskPtrAdapter(const TTskPtrAdapter& ta);
             ~TTskPtrAdapter();
-            virtual IAdapter* Clone() const;
+            IAdapter* Clone() const override;
             TTskPtrAdapter& operator=(const TTskPtrAdapter& ts);
-            virtual bool Run(TLog& log);
+            bool Run(TLog& log) override;
         private:
             IRunnable* task;
     };
@@ -291,7 +297,7 @@ typedef uint32_t tick_t;
         virtual ~TTimeSlot();
         TTimeSlot * Clone() const;
         TTimeSlot& operator=(const TTimeSlot& ts);
-        virtual bool Run(TLog& log);
+        bool Run(TLog& log) override;
         void SetStartTime(tick_t time);
         void SetMinDuration(tick_t time);
         void SetPadding(tick_t time);
@@ -387,7 +393,7 @@ typedef uint32_t tick_t;
 // ///////////////////////// //
 //      TTimeSlotChain       //
 // ///////////////////////// //
-    typedef TTimeSlot * TTimeSlotPtr;
+    using TTimeSlotPtr = TTimeSlot *;
     class TTimeSlotChain {
         public:
             TTimeSlotChain(const std::initializer_list<TTimeSlot>& ts);
@@ -427,7 +433,7 @@ typedef uint32_t tick_t;
 // ///////////////////////// //
 //          TLoop            //
 // ///////////////////////// //
-    typedef TTimeSlotChain * TTimeSlotChainPtr;
+    using TTimeSlotChainPtr = TTimeSlotChain *;
     static TLog defaultLog;
     class TLoop {
         public:
