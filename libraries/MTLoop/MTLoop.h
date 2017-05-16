@@ -2,8 +2,7 @@
  * MTLoop.h
  */
 
-#ifndef MTLOOP_H
-#define MTLOOP_H
+#pragma once
 
 #include <stddef.h>
 #include <inttypes.h>
@@ -11,11 +10,11 @@
 
 namespace MT {
 
-using tick_t = uint32_t;
+    using tick_t = uint32_t;
 
-// ///////////////////////// //
-//         TTimer            //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //         TTimer            //
+    // ///////////////////////// //
 #ifdef MTLOOP_MOCK_TIMER
     class TTimer {
         public:
@@ -48,9 +47,9 @@ using tick_t = uint32_t;
 #endif
 
 
-// ///////////////////////// //
-//         TLog              //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //         TLog              //
+    // ///////////////////////// //
     class TLog {
         public:
             TLog() = default;
@@ -63,9 +62,9 @@ using tick_t = uint32_t;
     }
 
 
-// ///////////////////////// //
-//         IRunnable         //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //         IRunnable         //
+    // ///////////////////////// //
     class IRunnable {
         public:
             virtual bool Run(TLog& log) = 0;
@@ -73,9 +72,9 @@ using tick_t = uint32_t;
     };
 
 
-// ///////////////////////// //
-//         TStat             //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //         TStat             //
+    // ///////////////////////// //
     class TStat {
         public:
             TStat();
@@ -123,9 +122,9 @@ using tick_t = uint32_t;
     }
 
 
-// ///////////////////////// //
-//         IAdapter          //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //         IAdapter          //
+    // ///////////////////////// //
     class IAdapter: public TStat, public IRunnable {
         public:
             virtual IAdapter* Clone() const = 0;
@@ -144,9 +143,9 @@ using tick_t = uint32_t;
     }
 
 
-// ///////////////////////// //
-//         TCbAdapter        //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //         TCbAdapter        //
+    // ///////////////////////// //
     using callbackPtr = bool(*)(TLog& log);
     class TCbAdapter: public IAdapter {
         public:
@@ -178,9 +177,9 @@ using tick_t = uint32_t;
     }
 
 
-// ///////////////////////// //
-//         TCbDummyAdapter        //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //     TCbDummyAdapter       //
+    // ///////////////////////// //
     using callbackDummyPtr = void(*)();
     class TCbDummyAdapter: public IAdapter {
         public:
@@ -213,9 +212,9 @@ using tick_t = uint32_t;
     }
 
 
-// ///////////////////////// //
-//         TTskAdapter       //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //         TTskAdapter       //
+    // ///////////////////////// //
     class TTskAdapter: public IAdapter {
         public:
             TTskAdapter(IRunnable& task);
@@ -246,9 +245,9 @@ using tick_t = uint32_t;
     }
 
 
-// ///////////////////////// //
-//         TTskPtrAdapter       //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //      TTskPtrAdapter       //
+    // ///////////////////////// //
     class TTskPtrAdapter: public IAdapter {
         public:
             TTskPtrAdapter(IRunnable* task);
@@ -284,9 +283,9 @@ using tick_t = uint32_t;
     }
 
 
-// ///////////////////////// //
-//         TTimeSlot         //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //         TTimeSlot         //
+    // ///////////////////////// //
     class TTimeSlot: public IRunnable {
     public:
         TTimeSlot(TCbAdapter ca, tick_t minDuration = 100, tick_t padding = 0);
@@ -390,9 +389,9 @@ using tick_t = uint32_t;
     }
 
 
-// ///////////////////////// //
-//      TTimeSlotChain       //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //      TTimeSlotChain       //
+    // ///////////////////////// //
     using TTimeSlotPtr = TTimeSlot *;
     class TTimeSlotChain {
         public:
@@ -430,9 +429,9 @@ using tick_t = uint32_t;
     }
 
 
-// ///////////////////////// //
-//          TLoop            //
-// ///////////////////////// //
+    // ///////////////////////// //
+    //          TLoop            //
+    // ///////////////////////// //
     using TTimeSlotChainPtr = TTimeSlotChain *;
     static TLog defaultLog;
     class TLoop {
@@ -474,4 +473,3 @@ using tick_t = uint32_t;
     }
 }
 
-#endif
