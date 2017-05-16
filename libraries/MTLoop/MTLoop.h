@@ -37,9 +37,9 @@ typedef uint32_t tick_t;
 #elif MTLOOP_DUMMY_TIMER
 #else
     class TTimer {
-    private:
     public:
         static tick_t GetTime();
+    private:
     };
 
     inline tick_t TTimer::GetTime() {
@@ -52,11 +52,11 @@ typedef uint32_t tick_t;
 //         TLog              //
 // ///////////////////////// //
     class TLog {
-        private:
         public:
             TLog() {}
             virtual ~TLog(){}
             void virtual Log(const char* logLine);
+        private:
     };
 
     inline void TLog::Log(const char* logLine) {
@@ -77,9 +77,6 @@ typedef uint32_t tick_t;
 //         TStat             //
 // ///////////////////////// //
     class TStat {
-        private:
-            tick_t startTime;
-            tick_t stopTime;
         public:
             TStat();
             TStat(const TStat& stat);
@@ -89,6 +86,9 @@ typedef uint32_t tick_t;
             tick_t GetStartTime();
             tick_t GetStopTime();
             tick_t GetDuration();
+        private:
+            tick_t startTime;
+            tick_t stopTime;
     };
  
     inline TStat::TStat()
@@ -149,14 +149,14 @@ typedef uint32_t tick_t;
 // ///////////////////////// //
     typedef bool(*callbackPtr)(TLog& log);
     class TCbAdapter: public IAdapter {
-        private:
-            callbackPtr cb;
         public:
             TCbAdapter(callbackPtr cb);
             TCbAdapter(const TCbAdapter& ca);
             virtual IAdapter* Clone() const;
             TCbAdapter& operator=(const TCbAdapter& ts);
             virtual bool Run(TLog& log);
+        private:
+            callbackPtr cb;
     };
 
     inline TCbAdapter::TCbAdapter(callbackPtr cb): IAdapter(), cb(cb) {}
@@ -181,14 +181,14 @@ typedef uint32_t tick_t;
 // ///////////////////////// //
     typedef void(*callbackDummyPtr)();
     class TCbDummyAdapter: public IAdapter {
-        private:
-            callbackDummyPtr cbd;
         public:
             TCbDummyAdapter(callbackDummyPtr cbd);
             TCbDummyAdapter(const TCbDummyAdapter& ca);
             virtual IAdapter* Clone() const;
             TCbDummyAdapter& operator=(const TCbDummyAdapter& ts);
             virtual bool Run(TLog& log);
+        private:
+            callbackDummyPtr cbd;
     };
 
     inline TCbDummyAdapter::TCbDummyAdapter(callbackDummyPtr cbd): IAdapter(), cbd(cbd) {}
@@ -213,14 +213,14 @@ typedef uint32_t tick_t;
 //         TTskAdapter       //
 // ///////////////////////// //
     class TTskAdapter: public IAdapter {
-        private:
-            IRunnable& task;
         public:
             TTskAdapter(IRunnable& task);
             TTskAdapter(const TTskAdapter& ta);
             virtual IAdapter* Clone() const;
             TTskAdapter& operator=(const TTskAdapter& ts);
             virtual bool Run(TLog& log);
+        private:
+            IRunnable& task;
     };
 
     inline TTskAdapter::TTskAdapter(IRunnable& task): IAdapter(), task(task) { }
@@ -244,8 +244,6 @@ typedef uint32_t tick_t;
 //         TTskPtrAdapter       //
 // ///////////////////////// //
     class TTskPtrAdapter: public IAdapter {
-        private:
-            IRunnable* task;
         public:
             TTskPtrAdapter(IRunnable* task);
             TTskPtrAdapter(const TTskPtrAdapter& ta);
@@ -253,6 +251,8 @@ typedef uint32_t tick_t;
             virtual IAdapter* Clone() const;
             TTskPtrAdapter& operator=(const TTskPtrAdapter& ts);
             virtual bool Run(TLog& log);
+        private:
+            IRunnable* task;
     };
 
     inline TTskPtrAdapter::TTskPtrAdapter(IRunnable* task): IAdapter(), task(task) {
@@ -282,11 +282,6 @@ typedef uint32_t tick_t;
 //         TTimeSlot         //
 // ///////////////////////// //
     class TTimeSlot: public IRunnable {
-    private:
-        IAdapter* task;
-        tick_t slotStartTime = 1;
-        tick_t minDuration;
-        tick_t padding;
     public:
         TTimeSlot(TCbAdapter ca, tick_t minDuration = 100, tick_t padding = 0);
         TTimeSlot(TCbDummyAdapter ca, tick_t minDuration = 100, tick_t padding = 0);
@@ -302,6 +297,11 @@ typedef uint32_t tick_t;
         void SetPadding(tick_t time);
         tick_t GetLTime();
         tick_t GetRTime();
+    private:
+        IAdapter* task;
+        tick_t slotStartTime = 1;
+        tick_t minDuration;
+        tick_t padding;
     };
 
     inline TTimeSlot::TTimeSlot(TCbAdapter ca, tick_t minDuration, tick_t padding)
@@ -389,14 +389,14 @@ typedef uint32_t tick_t;
 // ///////////////////////// //
     typedef TTimeSlot * TTimeSlotPtr;
     class TTimeSlotChain {
-        private:
-            TTimeSlotPtr* timeSlots;
-            size_t size = 0;
-            size_t curTimeSlot = 0;
         public:
             TTimeSlotChain(const std::initializer_list<TTimeSlot>& ts);
             ~TTimeSlotChain();
             bool Run(TLog& log);
+        private:
+            TTimeSlotPtr* timeSlots;
+            size_t size = 0;
+            size_t curTimeSlot = 0;
     };
 
     inline TTimeSlotChain::TTimeSlotChain(const std::initializer_list<TTimeSlot>& ts) {
@@ -430,17 +430,17 @@ typedef uint32_t tick_t;
     typedef TTimeSlotChain * TTimeSlotChainPtr;
     static TLog defaultLog;
     class TLoop {
+        public:
+            TLoop(size_t count = 10, TLog& log = defaultLog);
+            ~TLoop();
+            bool Attach(const std::initializer_list<TTimeSlot>& ts);
+            bool Run();
         private:
             TLog& log;
             TTimeSlotChainPtr* timeSlotChains;
             size_t count;
             size_t size;
             size_t curTimeSlotChain;
-        public:
-            TLoop(size_t count = 10, TLog& log = defaultLog);
-            ~TLoop();
-            bool Attach(const std::initializer_list<TTimeSlot>& ts);
-            bool Run();
     };
 
     inline TLoop::TLoop(size_t count, TLog& log)
