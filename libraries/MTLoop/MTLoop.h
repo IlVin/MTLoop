@@ -12,6 +12,10 @@ namespace MT {
 
     using tick_t = uint32_t;
 
+    const tick_t DEFAULT_SLOT_MIN_DURATION = 100;
+    const tick_t DEFAULT_SLOT_PADDING = 0;
+    const size_t DEFAULT_SLOT_CHAIN_COUNT = 10;
+
     // ///////////////////////// //
     //         TTimer            //
     // ///////////////////////// //
@@ -288,10 +292,10 @@ namespace MT {
     // ///////////////////////// //
     class TTimeSlot: public IRunnable {
     public:
-        TTimeSlot(TCbAdapter ca, tick_t minDuration = 100, tick_t padding = 0);
-        TTimeSlot(TCbDummyAdapter ca, tick_t minDuration = 100, tick_t padding = 0);
-        TTimeSlot(TTskAdapter ta, tick_t minDuration = 100, tick_t padding = 0);
-        TTimeSlot(TTskPtrAdapter ta, tick_t minDuration = 100, tick_t padding = 0);
+        TTimeSlot(TCbAdapter ca, tick_t minDuration = DEFAULT_SLOT_MIN_DURATION, tick_t padding = DEFAULT_SLOT_PADDING);
+        TTimeSlot(TCbDummyAdapter ca, tick_t minDuration = DEFAULT_SLOT_MIN_DURATION, tick_t padding = DEFAULT_SLOT_PADDING);
+        TTimeSlot(TTskAdapter ta, tick_t minDuration = DEFAULT_SLOT_MIN_DURATION, tick_t padding = DEFAULT_SLOT_PADDING);
+        TTimeSlot(TTskPtrAdapter ta, tick_t minDuration = DEFAULT_SLOT_MIN_DURATION, tick_t padding = DEFAULT_SLOT_PADDING);
         TTimeSlot(const TTimeSlot& ts);
         virtual ~TTimeSlot();
         TTimeSlot * Clone() const;
@@ -436,7 +440,7 @@ namespace MT {
     static TLog defaultLog;
     class TLoop {
         public:
-            TLoop(size_t count = 10, TLog& log = defaultLog);
+            TLoop(size_t count = DEFAULT_SLOT_CHAIN_COUNT, TLog& log = defaultLog);
             ~TLoop();
             bool Attach(const std::initializer_list<TTimeSlot>& ts);
             bool Run();
